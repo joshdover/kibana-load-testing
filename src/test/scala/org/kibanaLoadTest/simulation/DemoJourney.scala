@@ -24,8 +24,8 @@ class DemoJourney extends BaseSimulation {
   setUp(
     scn
       .inject(
-        constantConcurrentUsers(20) during (3 * 60), // 1
-        rampConcurrentUsers(20) to props.maxUsers during (3 * 60) // 2
+        constantConcurrentUsers(20 * 10) during (3 * 60 * 10), // 1
+        rampConcurrentUsers(20 * 10) to props.maxUsers during (3 * 60 * 10) // 2
       )
       .protocols(httpProtocol)
   ).maxDuration(props.simulationTimeout * 2)
