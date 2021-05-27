@@ -124,6 +124,9 @@ class CloudHttpClient(var env: CloudEnv.Value = CloudEnv.STAGING) {
     )
     // Always update stack version
     resources.foreach(resource => {
+    //       logger.info(
+    //   s"preparePayload stack version ${resource}: ${payload.toString()}"
+    // )
       val basePath =
         Symbol("resources") / Symbol(resource) / element(0) / Symbol("plan")
       payload = payload.update(
@@ -156,6 +159,9 @@ class CloudHttpClient(var env: CloudEnv.Value = CloudEnv.STAGING) {
 
     // Nodes setup
     Array("apm", "elasticsearch", "kibana").foreach(res => {
+      // logger.info(
+      //   s"preparePayload nodes setup ${res}: ${payload.toString()}"
+      // )
       val basePath =
         Symbol("resources") / Symbol(res) / element(0) / Symbol(
           "plan"
@@ -186,6 +192,8 @@ class CloudHttpClient(var env: CloudEnv.Value = CloudEnv.STAGING) {
             .getObject(res)
             .entrySet()
             .forEach(entry => {
+              if (entry.getValue.valueType() == ConfigValueType.OBJECT) return ""
+
               payload = payload.update(
                 basePath / element(0) / (if (entry.getKey == "memory")
                                            Symbol("size") / Symbol("value")
@@ -200,46 +208,46 @@ class CloudHttpClient(var env: CloudEnv.Value = CloudEnv.STAGING) {
       }
     })
 
-    def getNestedMap(basePath: String): Map[String, JsValue] = {
-      val nestedObj = config.getObject(basePath).entrySet()
-      var result = Map[String, JsValue]()
-      for (configPair <- SetHasAsScala(nestedObj).asScala) {
-        val configName = configPair.getKey
-        val configValue = configPair.getValue
-        val fullPath = s"$basePath.$configName"
+    // def getNestedMap(basePath: String): Map[String, JsValue] = {
+    //   val nestedObj = config.getObject(basePath).entrySet()
+    //   var result = Map[String, JsValue]()
+    //   for (configPair <- SetHasAsScala(nestedObj).asScala) {
+    //     val configName = configPair.getKey
+    //     val configValue = configPair.getValue
+    //     val fullPath = s"$basePath.$configName"
 
-        if (configValue.valueType() == ConfigValueType.BOOLEAN) {
-          result += (configName -> JsBoolean(config.getBoolean(fullPath)))
-        } else if (configValue.valueType() == ConfigValueType.STRING) {
-          result += (configName -> JsString(config.getString(fullPath)))
-        } else if (configValue.valueType() == ConfigValueType.NUMBER) {
-          result += (configName -> JsNumber(config.getDouble(fullPath)))
-        } else if (configValue.valueType() == ConfigValueType.OBJECT) {
-          result += (configName -> JsObject(getNestedMap(fullPath)))
-        } else {
-          throw new IllegalArgumentException(
-            s"Unsupported config type at apm.$configName"
-          )
-        }
-      }
+    //     if (configValue.valueType() == ConfigValueType.BOOLEAN) {
+    //       result += (configName -> JsBoolean(config.getBoolean(fullPath)))
+    //     } else if (configValue.valueType() == ConfigValueType.STRING) {
+    //       result += (configName -> JsString(config.getString(fullPath)))
+    //     } else if (configValue.valueType() == ConfigValueType.NUMBER) {
+    //       result += (configName -> JsNumber(config.getDouble(fullPath)))
+    //     } else if (configValue.valueType() == ConfigValueType.OBJECT) {
+    //       result += (configName -> JsObject(getNestedMap(fullPath)))
+    //     } else {
+    //       throw new IllegalArgumentException(
+    //         s"Unsupported config type at apm.$configName"
+    //       )
+    //     }
+    //   }
 
-      result
-    }
+    //   result
+    // }
 
-    if (config.hasPath("kibana.user-settings-overrides-json")) {
-      val overrides = getNestedMap("kibana.user-settings-overrides-json")
+    // if (config.hasPath("kibana.user-settings-overrides-json")) {
+    //   val overrides = getNestedMap("kibana.user-settings-overrides-json")
 
-      payload = payload.update(
-        Symbol("resources") / Symbol("kibana") / element(0) / Symbol(
-          "plan"
-        ) / Symbol("kibana") / Symbol("user_settings_override_json") ! set(
-          overrides
-        )
-      )
-    }
+    //   payload = payload.update(
+    //     Symbol("resources") / Symbol("kibana") / element(0) / Symbol(
+    //       "plan"
+    //     ) / Symbol("kibana") / Symbol("user_settings_override_json") ! set(
+    //       overrides
+    //     )
+    //   )
+    // }
 
     logger.info(
-      s"preparePayload: ${payload.toString()}"
+      s"preparePayload final: ${payload.toString()}"
     )
 
     payload.toString
